@@ -16,5 +16,3 @@ def extrair_arquivo_zip(url_zip, pasta_destino='trimestres_2025'):
         file.extractall(pasta_destino)
 
     return True
-
-print(extrair_arquivo_zip("https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/2025/2T2025.zip"))
