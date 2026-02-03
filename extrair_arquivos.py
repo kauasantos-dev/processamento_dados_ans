@@ -116,3 +116,40 @@ def merge_dados_cadastrais(
                 sep=';', 
                 encoding='utf-8'
             )
+
+def agregar_despesas(
+    consolidacao_final, 
+    caminho_despesas_agregadas='dadosvalidados/despesas_agregadas.csv'
+    ):
+
+    colunas_necessarias = ['RazaoSocial', 'UF', 'ValorDespesa']
+
+    df = pd.read_csv(
+        consolidacao_final, 
+        sep=';', 
+        encoding='utf-8', 
+        usecols=colunas_necessarias
+        )
+    
+    df_agregar_despesas = df.groupby(['RazaoSocial', 'UF']).agg(
+        TotalDespesa=('ValorDespesa', 'sum'),
+        MediaTrimestral=('ValorDespesa', 'mean'),
+        DesvioPadrao=('ValorDespesa', 'std')
+    ).reset_index()
+
+    df_agregar_despesas['DesvioPadrao'] = df_agregar_despesas['DesvioPadrao'].fillna(0)
+
+    colunas_decimais = ['TotalDespesa', 'MediaTrimestral', 'DesvioPadrao']
+
+    df_agregar_despesas[colunas_decimais] = df_agregar_despesas[colunas_decimais].round(2)
+
+    df_agregar_despesas = df_agregar_despesas.sort_values(by='TotalDespesa', ascending=False)
+
+    header = not os.path.exists(caminho_despesas_agregadas)
+    df_agregar_despesas.to_csv(
+        caminho_despesas_agregadas, 
+        index=False, 
+        header=header, 
+        sep=';', 
+        encoding='utf-8'
+    )
