@@ -53,3 +53,66 @@ def processar_e_consolidar(lista_arquivos_tri, caminho_cadastro, caminho_final):
                 modo = 'w' if not os.path.exists(caminho_final) else 'a'
                 header = not os.path.exists(caminho_final)
                 chunk.to_csv(caminho_final, mode=modo, index=False, header=header, sep=';', encoding='utf-8')
+
+def merge_dados_cadastrais(
+        relatorio_cadop, 
+        consolidacao_despesas_validas, 
+        consolidacao_despesas_invalidas,
+        caminho_arquivo_final
+        ):
+
+    df_relatorio_cadop = pd.read_csv(relatorio_cadop, sep=';', encoding='utf-8')
+
+    df_relatorio_cadop = df_relatorio_cadop.rename(columns={'REGISTRO_OPERADORA': 'RegistroANS'})
+
+    df_relatorio_cadop['Data_Registro_ANS'] = pd.to_datetime(df_relatorio_cadop['Data_Registro_ANS'], errors='coerce')
+
+    df_relatorio_cadop = df_relatorio_cadop.sort_values(by='Data_Registro_ANS', ascending=False)
+
+    df_dados_cadastrais_mais_recente = df_relatorio_cadop.drop_duplicates(subset=['CNPJ'], keep='first')
+
+    for df in pd.read_csv(consolidacao_despesas_validas, sep=';', encoding='utf-8', chunksize=20000):
+
+        df_merge_dados_validos = pd.merge(
+            df, 
+            df_dados_cadastrais_mais_recente[
+                ['CNPJ', 'RegistroANS', 'Modalidade', 'UF']],
+                on='CNPJ',
+                how='left'
+            )
+
+        operadoras_sem_cadastro = df_merge_dados_validos['RegistroANS'].isna()
+
+        df_operadoras_sem_cadastro = df_merge_dados_validos[operadoras_sem_cadastro].copy()
+
+        if not df_operadoras_sem_cadastro.empty:
+            df_operadoras_sem_cadastro['Status_Validacao'] = 'Invalido'
+            df_operadoras_sem_cadastro['Motivo_Erro'] = 'CNPJ não localizado no cadastro ativo da ANS; '
+            df_operadoras_sem_cadastro.to_csv(
+                consolidacao_despesas_invalidas, 
+                mode='a', 
+                index=False, 
+                header=False, 
+                sep=';', 
+                encoding='utf-8'
+            )
+
+        df_merge_dados_validos = df_merge_dados_validos[~operadoras_sem_cadastro].copy()
+
+        if not df_merge_dados_validos.empty:
+            colunas_finais = [
+                'CNPJ', 'RazaoSocial', 'Trimestre', 'Ano', 'ValorDespesa', 
+                'RegistroANS', 'Modalidade', 'UF'
+            ]
+    
+            df_merge_dados_validos = df_merge_dados_validos[colunas_finais]
+
+            header = not os.path.exists(caminho_arquivo_final)
+            df_merge_dados_validos.to_csv(
+                caminho_arquivo_final, 
+                mode='a', 
+                index=False, 
+                header=header, 
+                sep=';', 
+                encoding='utf-8'
+            )
