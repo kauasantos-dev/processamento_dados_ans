@@ -2,21 +2,25 @@ import os
 import io
 import requests
 import pandas as pd
-from zipfile import ZipFile
+from zipfile import ZipFile, is_zipfile
 
-def extrair_arquivo_zip(url_zip, pasta_destino='trimestres_2025'):
+def extrair_arquivo_zip(url_zip, pasta_destino='trimestres2025'):
     os.makedirs(pasta_destino, exist_ok=True)
 
     try:
         arquivo_zip = requests.get(url_zip, timeout=20)
         arquivo_zip.raise_for_status()
+
+        conteudo_bytes = io.BytesIO(arquivo_zip.content)
+
+        if not is_zipfile(conteudo_bytes):
+            return False
+
+        with ZipFile(conteudo_bytes) as file:
+            file.extractall(pasta_destino)
+        return True
     except requests.RequestException:
         return False
-    
-    with ZipFile(io.BytesIO(arquivo_zip.content)) as file:
-        file.extractall(pasta_destino)
-
-    return True
 
 def verificar_dado_especifico(caminho_arquivo, dado_especifico):
     for chunk in pd.read_csv(caminho_arquivo, delimiter=';', chunksize=10000):
@@ -25,7 +29,12 @@ def verificar_dado_especifico(caminho_arquivo, dado_especifico):
             return True
     return False
 
-def processar_e_consolidar(lista_arquivos_tri, caminho_cadastro, caminho_final):
+def processar_e_consolidar(
+        lista_arquivos_tri, 
+        caminho_cadastro, 
+        caminho_final='consolidacao/consolidacao_trimestres.csv'
+    ):
+    
     df_cad = pd.read_csv(caminho_cadastro, sep=';', encoding='utf-8', usecols=['REGISTRO_OPERADORA', 'CNPJ', 'Razao_Social'])
     df_cad['REGISTRO_OPERADORA'] = df_cad['REGISTRO_OPERADORA'].astype(str)
     
@@ -58,7 +67,7 @@ def merge_dados_cadastrais(
         relatorio_cadop, 
         consolidacao_despesas_validas, 
         consolidacao_despesas_invalidas,
-        caminho_arquivo_final
+        caminho_arquivo_final='dadosvalidados/consolidacao_final.csv'
         ):
 
     df_relatorio_cadop = pd.read_csv(relatorio_cadop, sep=';', encoding='utf-8')
@@ -116,3 +125,40 @@ def merge_dados_cadastrais(
                 sep=';', 
                 encoding='utf-8'
             )
+
+def agregar_despesas(
+    consolidacao_final, 
+    caminho_despesas_agregadas='dadosvalidados/despesas_agregadas.csv'
+    ):
+
+    colunas_necessarias = ['RazaoSocial', 'UF', 'ValorDespesa']
+
+    df = pd.read_csv(
+        consolidacao_final, 
+        sep=';', 
+        encoding='utf-8', 
+        usecols=colunas_necessarias
+        )
+    
+    df_agregar_despesas = df.groupby(['RazaoSocial', 'UF']).agg(
+        TotalDespesa=('ValorDespesa', 'sum'),
+        MediaTrimestral=('ValorDespesa', 'mean'),
+        DesvioPadrao=('ValorDespesa', 'std')
+    ).reset_index()
+
+    df_agregar_despesas['DesvioPadrao'] = df_agregar_despesas['DesvioPadrao'].fillna(0)
+
+    colunas_decimais = ['TotalDespesa', 'MediaTrimestral', 'DesvioPadrao']
+
+    df_agregar_despesas[colunas_decimais] = df_agregar_despesas[colunas_decimais].round(2)
+
+    df_agregar_despesas = df_agregar_despesas.sort_values(by='TotalDespesa', ascending=False)
+
+    header = not os.path.exists(caminho_despesas_agregadas)
+    df_agregar_despesas.to_csv(
+        caminho_despesas_agregadas, 
+        index=False, 
+        header=header, 
+        sep=';', 
+        encoding='utf-8'
+    )
