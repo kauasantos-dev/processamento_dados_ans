@@ -4,7 +4,11 @@ from pydantic import HttpUrl, BaseModel
 class UrlSchema(BaseModel):
     url: HttpUrl
 
-def validar_e_marcar_dados(caminho_arquivo, diretorio_dados_validados):
+def validar_e_marcar_dados(
+        caminho_arquivo, 
+        diretorio_dados_validados='dadosvalidados'
+    ):
+    
     os.makedirs(diretorio_dados_validados, exist_ok=True)
     arquivo_dados_validos = os.path.join(diretorio_dados_validados, 'consolidacao_despesas_validas.csv')
     arquivo_dados_invalidos = os.path.join(diretorio_dados_validados, 'consolidacao_despesas_invalidas.csv')
@@ -54,5 +58,3 @@ def validar_e_marcar_dados(caminho_arquivo, diretorio_dados_validados):
         df_dados_validos.to_csv(arquivo_dados_validos, mode='a', index=False, sep=';', encoding='utf-8', header=primeira_escrita_dados_validos)
 
         df_dados_invalidos.to_csv(arquivo_dados_invalidos, mode='a', index=False, sep=';', encoding='utf-8', header=primeira_escrita_dados_invalidos)
-
-validar_e_marcar_dados('consolidacao/consolidacao_despesas.csv', 'dadosvalidados')
