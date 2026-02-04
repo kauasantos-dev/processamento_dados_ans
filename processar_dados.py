@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from zipfile import ZipFile, is_zipfile
 
-def extrair_arquivo_zip(url_zip, pasta_destino='trimestres_2025'):
+def extrair_arquivo_zip(url_zip, pasta_destino='trimestres2025'):
     os.makedirs(pasta_destino, exist_ok=True)
 
     try:
@@ -29,7 +29,12 @@ def verificar_dado_especifico(caminho_arquivo, dado_especifico):
             return True
     return False
 
-def processar_e_consolidar(lista_arquivos_tri, caminho_cadastro, caminho_final):
+def processar_e_consolidar(
+        lista_arquivos_tri, 
+        caminho_cadastro, 
+        caminho_final='consolidacao/consolidacao_trimestres.csv'
+    ):
+    
     df_cad = pd.read_csv(caminho_cadastro, sep=';', encoding='utf-8', usecols=['REGISTRO_OPERADORA', 'CNPJ', 'Razao_Social'])
     df_cad['REGISTRO_OPERADORA'] = df_cad['REGISTRO_OPERADORA'].astype(str)
     
@@ -62,7 +67,7 @@ def merge_dados_cadastrais(
         relatorio_cadop, 
         consolidacao_despesas_validas, 
         consolidacao_despesas_invalidas,
-        caminho_arquivo_final
+        caminho_arquivo_final='dadosvalidados/consolidacao_final.csv'
         ):
 
     df_relatorio_cadop = pd.read_csv(relatorio_cadop, sep=';', encoding='utf-8')
