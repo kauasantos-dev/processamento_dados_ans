@@ -2,7 +2,7 @@ import os
 import io
 import requests
 import pandas as pd
-from zipfile import ZipFile
+from zipfile import ZipFile, is_zipfile
 
 def extrair_arquivo_zip(url_zip, pasta_destino='trimestres_2025'):
     os.makedirs(pasta_destino, exist_ok=True)
@@ -10,13 +10,17 @@ def extrair_arquivo_zip(url_zip, pasta_destino='trimestres_2025'):
     try:
         arquivo_zip = requests.get(url_zip, timeout=20)
         arquivo_zip.raise_for_status()
+
+        conteudo_bytes = io.BytesIO(arquivo_zip.content)
+
+        if not is_zipfile(conteudo_bytes):
+            return False
+
+        with ZipFile(conteudo_bytes) as file:
+            file.extractall(pasta_destino)
+        return True
     except requests.RequestException:
         return False
-    
-    with ZipFile(io.BytesIO(arquivo_zip.content)) as file:
-        file.extractall(pasta_destino)
-
-    return True
 
 def verificar_dado_especifico(caminho_arquivo, dado_especifico):
     for chunk in pd.read_csv(caminho_arquivo, delimiter=';', chunksize=10000):
