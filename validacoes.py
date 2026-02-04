@@ -15,9 +15,15 @@ def validar_caminho(caminho, tipo='ambos'):
     
     return True
 
-def validar_e_marcar_dados(caminho_arquivo, diretorio_dados_validados):
+def validar_e_marcar_dados(
+        caminho_arquivo, 
+        diretorio_dados_validados='dadosvalidados'
+    ):
+
     os.makedirs(diretorio_dados_validados, exist_ok=True)
+
     arquivo_dados_validos = os.path.join(diretorio_dados_validados, 'consolidacao_despesas_validas.csv')
+    
     arquivo_dados_invalidos = os.path.join(diretorio_dados_validados, 'consolidacao_despesas_invalidas.csv')
 
     for df in pd.read_csv(caminho_arquivo, sep=';', chunksize=20000, encoding='utf-8'):
