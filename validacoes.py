@@ -4,22 +4,11 @@ from pydantic import HttpUrl, BaseModel
 class UrlSchema(BaseModel):
     url: HttpUrl
 
-def validar_caminho(caminho, tipo='ambos'):
-    if not os.path.exists(caminho):
-        return False
-        
-    if tipo == 'arquivo':
-        return os.path.isfile(caminho)
-    elif tipo == 'diretorio':
-        return os.path.isdir(caminho)
-    
-    return True
-
 def validar_e_marcar_dados(
         caminho_arquivo, 
         diretorio_dados_validados='dadosvalidados'
     ):
-
+    
     os.makedirs(diretorio_dados_validados, exist_ok=True)
 
     arquivo_dados_validos = os.path.join(diretorio_dados_validados, 'consolidacao_despesas_validas.csv')
